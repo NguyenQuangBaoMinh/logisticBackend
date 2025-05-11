@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng điều khiển - Hệ thống Quản lý Chuỗi Cung Ứng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #343a40;
+            color: white;
+        }
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: 0.5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+        }
+        .nav-link:hover {
+            color: #fff;
+        }
+        .nav-link.active {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        main {
+            padding-top: 48px;
+        }
+        .card-stats {
+            border-radius: 10px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .card-stats:hover {
+            transform: translateY(-5px);
+        }
+        .stats-icon {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar navbar-dark sticky-top bg-primary flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">SCM System</a>
+        <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="w-100"></div>
+        <div class="navbar-nav">
+            <div class="nav-item text-nowrap d-flex align-items-center">
+                <span class="text-white me-3">Xin chào, <span sec:authentication="name"></span></span>
+                <form th:action="@{/logout}" method="post" class="me-3">
+                    <button type="submit" class="btn btn-light btn-sm">Đăng xuất</button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                Bảng điều khiển
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'PURCHASER')">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-building me-2"></i>
+                                Nhà cung cấp
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'SALES', 'WAREHOUSE')">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-cart-check me-2"></i>
+                                Đơn hàng
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'WAREHOUSE')">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-box-seam me-2"></i>
+                                Kho hàng
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'SHIPPER')">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-truck me-2"></i>
+                                Vận chuyển
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'ACCOUNTANT')">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-credit-card me-2"></i>
+                                Thanh toán
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-people me-2"></i>
+                                Quản lý người dùng
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/}">
+                                <i class="bi bi-house me-2"></i>
+                                Trang chủ
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Bảng điều khiển</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary">Chia sẻ</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary">Xuất báo cáo</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="card card-stats">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-icon bg-primary text-white me-3">
+                                        <i class="bi bi-cart"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-0">Đơn hàng</h5>
+                                        <h3 class="mt-2 mb-0">25</h3>
+                                        <p class="text-muted mb-0">Đơn hàng mới</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card card-stats">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-icon bg-success text-white me-3">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-0">Tồn kho</h5>
+                                        <h3 class="mt-2 mb-0">152</h3>
+                                        <p class="text-muted mb-0">Sản phẩm</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card card-stats">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-icon bg-warning text-white me-3">
+                                        <i class="bi bi-truck"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-0">Giao hàng</h5>
+                                        <h3 class="mt-2 mb-0">18</h3>
+                                        <p class="text-muted mb-0">Đang vận chuyển</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card card-stats">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-icon bg-info text-white me-3">
+                                        <i class="bi bi-building"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="card-title mb-0">Nhà cung cấp</h5>
+                                        <h3 class="mt-2 mb-0">42</h3>
+                                        <p class="text-muted mb-0">Tổng số</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h2>Đơn hàng gần đây</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn hàng</th>
+                                <th>Khách hàng</th>
+                                <th>Ngày đặt</th>
+                                <th>Trạng thái</th>
+                                <th>Tổng tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ORD-1001</td>
+                                <td>Công ty ABC</td>
+                                <td>10/05/2025</td>
+                                <td><span class="badge bg-warning">Đang xử lý</span></td>
+                                <td>5,000,000 ₫</td>
+                            </tr>
+                            <tr>
+                                <td>ORD-1002</td>
+                                <td>Công ty XYZ</td>
+                                <td>09/05/2025</td>
+                                <td><span class="badge bg-success">Hoàn thành</span></td>
+                                <td>7,500,000 ₫</td>
+                            </tr>
+                            <tr>
+                                <td>ORD-1003</td>
+                                <td>Công ty DEF</td>
+                                <td>08/05/2025</td>
+                                <td><span class="badge bg-primary">Đang giao hàng</span></td>
+                                <td>3,200,000 ₫</td>
+                            </tr>
+                            <tr>
+                                <td>ORD-1004</td>
+                                <td>Công ty GHI</td>
+                                <td>07/05/2025</td>
+                                <td><span class="badge bg-success">Hoàn thành</span></td>
+                                <td>9,800,000 ₫</td>
+                            </tr>
+                            <tr>
+                                <td>ORD-1005</td>
+                                <td>Công ty JKL</td>
+                                <td>06/05/2025</td>
+                                <td><span class="badge bg-danger">Đã hủy</span></td>
+                                <td>2,400,000 ₫</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang chủ - Hệ thống Quản lý Chuỗi Cung Ứng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background-color: #f8f9fa;
+            padding: 6rem 0;
+            text-align: center;
+        }
+        .hero-title {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            color: #0d6efd;
+        }
+        .hero-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: #6c757d;
+        }
+        .features-section {
+            padding: 5rem 0;
+        }
+        .feature-card {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            height: 100%;
+        }
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            color: #0d6efd;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">SCM System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Trang chủ</a>
+                    </li>
+                    <li class="nav-item" sec:authorize="isAuthenticated()">
+                        <a class="nav-link" th:href="@{/dashboard}">Bảng điều khiển</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <div sec:authorize="isAnonymous()">
+                        <a th:href="@{/login}" class="btn btn-light">Đăng nhập</a>
+                    </div>
+                    <div sec:authorize="isAuthenticated()" class="d-flex align-items-center">
+                        <span class="text-white me-3">Xin chào, <span sec:authentication="name"></span></span>
+                        <form th:action="@{/logout}" method="post">
+                            <button type="submit" class="btn btn-light">Đăng xuất</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero-section">
+        <div class="container">
+            <h1 class="hero-title">Hệ thống Quản lý Chuỗi Cung Ứng</h1>
+            <p class="hero-subtitle">Giải pháp tối ưu cho việc quản lý chuỗi cung ứng của doanh nghiệp</p>
+            <div sec:authorize="isAnonymous()">
+                <a th:href="@{/login}" class="btn btn-primary btn-lg">Bắt đầu ngay</a>
+            </div>
+            <div sec:authorize="isAuthenticated()">
+                <a th:href="@{/dashboard}" class="btn btn-primary btn-lg">Đi đến bảng điều khiển</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features-section">
+        <div class="container">
+            <h2 class="text-center mb-5">Tính năng chính</h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">📦</div>
+                        <h3>Quản lý Nhà Cung Cấp</h3>
+                        <p>Quản lý thông tin chi tiết về nhà cung cấp, đánh giá và xếp hạng hiệu suất.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">📋</div>
+                        <h3>Quản lý Đơn Hàng</h3>
+                        <p>Tạo và theo dõi đơn hàng, quản lý đơn hàng nhập và xuất, xác nhận và hủy đơn hàng.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">🚚</div>
+                        <h3>Quản lý Vận Chuyển và Giao Hàng</h3>
+                        <p>Lên lịch giao hàng, theo dõi vận chuyển, quản lý đối tác vận chuyển.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Hệ thống Quản lý Chuỗi Cung Ứng</h5>
+                    <p>Giải pháp toàn diện cho doanh nghiệp của bạn</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p>&copy; 2025 SCM System. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
