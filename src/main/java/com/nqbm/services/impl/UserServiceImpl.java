@@ -20,9 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service("userDetailsService")
 @Transactional
 public class UserServiceImpl implements UserService {
+
     @Autowired
     private UserRepository userRepository;
-    
+
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
@@ -59,16 +60,27 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        System.out.println("====== DEBUG AUTHENTICATION ======");
+        System.out.println("Looking for user: " + username);
+
         User user = this.userRepository.getUserByUsername(username);
-        
+
         if (user == null) {
+            System.out.println("User not found! Username: " + username);
             throw new UsernameNotFoundException("User not found with username: " + username);
         }
-        
-        Set<GrantedAuthority> authorities = user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
-                .collect(Collectors.toSet());
-        
+
+        System.out.println("User found! Username: " + username);
+        System.out.println("Password hash: " + user.getPassword());
+        System.out.println("User active: " + user.isActive());
+        System.out.println("User roles count: " + user.getRoles().size());
+
+        Set<GrantedAuthority> authorities = new HashSet<>();
+        for (Role role : user.getRoles()) {
+            System.out.println("Role: " + role.getName());
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
+        }
+
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword(),

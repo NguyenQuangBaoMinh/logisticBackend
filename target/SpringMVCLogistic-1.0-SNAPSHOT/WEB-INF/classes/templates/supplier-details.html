@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${supplier.name} + ' - Chi tiết nhà cung cấp - Hệ thống Quản lý Chuỗi Cung Ứng'"></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Các style giống như trang suppliers.html -->
+</head>
+<body>
+    <!-- Header giống như trang suppliers.html -->
+    <!-- Sidebar giống như trang suppliers.html -->
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Chi tiết nhà cung cấp</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <div class="btn-group me-2">
+                    <a th:href="@{/suppliers}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại
+                    </a>
+                    <a th:href="@{'/suppliers/edit/' + ${supplier.id}}" class="btn btn-sm btn-warning" sec:authorize="hasRole('PURCHASER')">
+                        <i class="bi bi-pencil me-1"></i> Sửa
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Thông tin nhà cung cấp</h5>
+                        <span class="badge" th:classappend="${supplier.active ? 'bg-success' : 'bg-danger'}"
+                              th:text="${supplier.active ? 'Đang hoạt động' : 'Ngừng hoạt động'}"></span>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th style="width: 30%">ID:</th>
+                                    <td th:text="${supplier.id}"></td>
+                                </tr>
+                                <tr>
+                                    <th>Tên nhà cung cấp:</th>
+                                    <td th:text="${supplier.name}"></td>
+                                </tr>
+                                <tr>
+                                    <th>Người liên hệ:</th>
+                                    <td th:text="${supplier.contactPerson}"></td>
+                                </tr>
+                                <tr>
+                                    <th>Số điện thoại:</th>
+                                    <td th:text="${supplier.phoneNumber}"></td>
+                                </tr>
+                                <tr>
+                                    <th>Email:</th>
+                                    <td th:text="${supplier.email}"></td>
+                                </tr>
+                                <tr>
+                                    <th>Địa chỉ:</th>
+                                    <td th:text="${supplier.address}"></td>
+                                </tr>
+                                <tr>
+                                    <th>Mã số thuế:</th>
+                                    <td th:text="${supplier.taxCode}"></td>
+                                </tr>
+                                <tr>
+                                    <th>Điều khoản thanh toán:</th>
+                                    <td th:text="${supplier.paymentTerms}"></td>
+                                </tr>
+                                <tr>
+                                    <th>Đánh giá:</th>
+                                    <td>
+                                        <div class="rating-stars">
+                                            <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                                                <i class="bi" th:classappend="${i <= supplier.rating ? 'bi-star-fill' : 'bi-star'}"></i>
+                                            </th:block>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Ngày tạo:</th>
+                                    <td th:text="${#dates.format(supplier.createdDate, 'dd/MM/yyyy HH:mm')}"></td>
+                                </tr>
+                                <tr>
+                                    <th>Người tạo:</th>
+                                    <td th:text="${supplier.createdBy != null ? supplier.createdBy.displayName : 'N/A'}"></td>
+                                </tr>
+                                <tr>
+                                    <th>Cập nhật lần cuối:</th>
+                                    <td th:text="${#dates.format(supplier.updatedDate, 'dd/MM/yyyy HH:mm')}"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <!-- Các thông tin bổ sung có thể thêm vào đây -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Thống kê</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Tổng đơn hàng:</span>
+                            <span class="fw-bold">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Tổng giá trị:</span>
+                            <span class="fw-bold">0 ₫</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Tổng sản phẩm:</span>
+                            <span class="fw-bold">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Thao tác</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="#" class="btn btn-primary">
+                                <i class="bi bi-cart-plus me-1"></i> Tạo đơn hàng mới
+                            </a>
+                            <a href="#" class="btn btn-info">
+                                <i class="bi bi-file-earmark-text me-1"></i> Xem lịch sử giao dịch
+                            </a>
+                            <a th:href="@{'/suppliers/delete/' + ${supplier.id}}" class="btn btn-danger"
+                               onclick="return confirm('Bạn có chắc chắn muốn xóa nhà cung cấp này?')"
+                               sec:authorize="hasRole('PURCHASER')">
+                                <i class="bi bi-trash me-1"></i> Xóa nhà cung cấp
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

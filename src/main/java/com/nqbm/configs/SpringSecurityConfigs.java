@@ -14,6 +14,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,6 +22,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -32,6 +35,7 @@ import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import javax.sql.DataSource;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.web.debug.DebugFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -50,17 +54,26 @@ public class SpringSecurityConfigs {
     @Autowired
     private DataSource dataSource;
 
+
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(10);
     }
 
     @Bean
     public AuthenticationManager authManager(HttpSecurity http) throws Exception {
         AuthenticationManagerBuilder auth = http.getSharedObject(AuthenticationManagerBuilder.class);
+        System.out.println("Configuring AuthenticationManager with userDetailsService");
         auth.userDetailsService(userDetailsService)
             .passwordEncoder(passwordEncoder());
         return auth.build();
+    }
+
+    @Bean
+    public AuthenticationSuccessHandler authenticationSuccessHandler() {
+        SimpleUrlAuthenticationSuccessHandler handler = new SimpleUrlAuthenticationSuccessHandler("/dashboard");
+        handler.setUseReferer(true);
+        return handler;
     }
 
     @Bean
@@ -72,8 +85,11 @@ public class SpringSecurityConfigs {
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers("/", "/home", "/login", "/logout", 
-                               "/api/auth/**", "/error").permitAll()
+                               "/register","/api/auth/**", "/error").permitAll()
                 .requestMatchers("/static/**", "/resources/**").permitAll()
+                
+                // Debug endpoints
+                .requestMatchers("/debug-auth", "/create-new-admin", "/generate-password").permitAll()
                 
                 // Admin management
                 .requestMatchers("/admin/**").hasRole("ADMIN")
@@ -149,7 +165,6 @@ public class SpringSecurityConfigs {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
-
 
     @Bean
     public Cloudinary cloudinary() {
