@@ -56,6 +56,11 @@ public class Product implements Serializable {
     @JoinColumn(name = "supplier_id")
     private Supplier supplier;
     
+    
+    @ManyToOne
+    @JoinColumn(name="inventory_id")
+    private Inventory inventoryId;
+    
     @ManyToOne
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -172,6 +177,8 @@ public class Product implements Serializable {
         this.orderDetails = orderDetails;
     }
     
+    
+    
     @PrePersist
     protected void onCreate() {
         this.createdDate = new Date();
@@ -181,5 +188,19 @@ public class Product implements Serializable {
     @PreUpdate
     protected void onUpdate() {
         this.updatedDate = new Date();
+    }
+
+    /**
+     * @return the inventoryId
+     */
+    public Inventory getInventoryId() {
+        return inventoryId;
+    }
+
+    /**
+     * @param inventoryId the inventoryId to set
+     */
+    public void setInventoryId(Inventory inventoryId) {
+        this.inventoryId = inventoryId;
     }
 }
