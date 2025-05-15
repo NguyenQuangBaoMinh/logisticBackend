@@ -17,15 +17,20 @@ import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @Transactional
 public class UserRepositoryImpl implements UserRepository {
+
     @Autowired
     private SessionFactory sessionFactory;
-    
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
     @Override
     public User getUserById(Long id) {
         Session session = this.sessionFactory.getCurrentSession();
@@ -39,10 +44,10 @@ public class UserRepositoryImpl implements UserRepository {
         CriteriaQuery<User> query = builder.createQuery(User.class);
         Root<User> root = query.from(User.class);
         query.select(root);
-        
+
         Predicate p = builder.equal(root.get("username").as(String.class), username);
         query.where(p);
-        
+
         try {
             return session.createQuery(query).getSingleResult();
         } catch (NoResultException ex) {
@@ -57,15 +62,15 @@ public class UserRepositoryImpl implements UserRepository {
         CriteriaQuery<User> query = builder.createQuery(User.class);
         Root<User> root = query.from(User.class);
         query.select(root);
-        
+
         if (username != null && !username.isEmpty()) {
-            Predicate p = builder.like(root.get("username").as(String.class), 
+            Predicate p = builder.like(root.get("username").as(String.class),
                     String.format("%%%s%%", username));
             query.where(p);
         }
-        
+
         query.orderBy(builder.desc(root.get("id")));
-        
+
         return session.createQuery(query).getResultList();
     }
 
@@ -104,5 +109,12 @@ public class UserRepositoryImpl implements UserRepository {
             System.err.println(ex.getMessage());
             return false;
         }
+    }
+
+    @Override
+    public boolean authenticate(String username, String password) {
+        User u = this.getUserByUsername(username);
+
+        return this.passwordEncoder.matches(password, u.getPassword());
     }
 }

@@ -83,6 +83,7 @@ public class SpringSecurityConfigs {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
+                
                 // Public endpoints
                 .requestMatchers("/", "/home", "/login", "/logout", 
                                "/register","/api/auth/**", "/error").permitAll()
@@ -115,16 +116,10 @@ public class SpringSecurityConfigs {
                 // API endpoints
                 .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/**").hasAnyRole("ADMIN", "MANAGER")
-                
                 .anyRequest().authenticated()
             )
-            .formLogin(form -> form
-                .loginPage("/login")
-                .loginProcessingUrl("/login")
-                .defaultSuccessUrl("/dashboard")
-                .failureUrl("/login?error=true")
-                .permitAll()
-            )
+            .formLogin(form -> form.disable()) // Không dùng form login mặc định
+            .httpBasic(httpBasic -> httpBasic.disable())
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout=true")
@@ -140,6 +135,7 @@ public class SpringSecurityConfigs {
             .exceptionHandling(ex -> ex
                 .accessDeniedPage("/access-denied")
             );
+        
         
         return http.build();
     }

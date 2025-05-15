@@ -25,7 +25,7 @@ public class InventoryController {
     @Autowired
     private InventoryService invenService;
 
-    @GetMapping
+    @GetMapping("/inventories")
     public String listInventory(Model model) {
         List<Inventory> inventories = invenService.getAllInventory();
         model.addAttribute("inventories", inventories);

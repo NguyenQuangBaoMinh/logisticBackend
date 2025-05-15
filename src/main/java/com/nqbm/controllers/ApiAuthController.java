@@ -8,8 +8,6 @@ package com.nqbm.controllers;
  *
  * @author baominh14022004gmail.com
  */
-
-
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -19,6 +17,8 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nqbm.pojo.User;
 import com.nqbm.services.UserService;
+import com.nqbm.utils.JwtUtils;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,46 +35,61 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
 public class ApiAuthController {
-    
-    private static final String JWT_SECRET = "BaoMinh14022004@";
-    
+
+    private static final String JWT_SECRET = "v$8C@1S7o9Dk#LmQxPz!bW2hEgTfYUiK";
+
     @Autowired
     private AuthenticationManager authenticationManager;
-    
+
     @Autowired
     private UserService userService;
-    
+
+    @PostMapping("/user-login")
+    public ResponseEntity<?> login(@RequestBody User u) {
+
+        if (this.userService.authenticate(u.getUsername(), u.getPassword())) {
+            try {
+                String token = JwtUtils.generateToken(u.getUsername());
+                return ResponseEntity.ok().body(Collections.singletonMap("token", token));
+            } catch (Exception e) {
+                return ResponseEntity.status(500).body("Lỗi khi tạo JWT");
+            }
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Sai thông tin đăng nhập");
+    }
+
     @PostMapping(value = "/login", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> loginData) {
         try {
             String username = loginData.get("username");
             String password = loginData.get("password");
-            
+
             // Authenticate user
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password));
-            
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            
+
             // Generate JWT
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             User user = userService.getUserByUsername(username);
-            
+
             String token = generateToken(userDetails);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("username", username);
             response.put("roles", userDetails.getAuthorities());
             response.put("userId", user.getId());
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (BadCredentialsException e) {
             Map<String, Object> response = new HashMap<>();
             response.put("error", "Invalid credentials");
@@ -85,12 +100,12 @@ public class ApiAuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-    
+
     private String generateToken(UserDetails userDetails) {
         try {
             // Create JWT signer
             JWSSigner signer = new MACSigner(JWT_SECRET.getBytes());
-            
+
             // Prepare JWT with claims
             JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
                     .subject(userDetails.getUsername())
@@ -99,16 +114,16 @@ public class ApiAuthController {
                     .expirationTime(new Date(System.currentTimeMillis() + 86400000)) // 24 hours
                     .claim("roles", userDetails.getAuthorities().toString())
                     .build();
-            
+
             // Create JWT
             SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
-            
+
             // Sign the JWT
             signedJWT.sign(signer);
-            
+
             // Serialize to compact form
             return signedJWT.serialize();
-            
+
         } catch (JOSEException e) {
             throw new RuntimeException("Error generating JWT token", e);
         }
