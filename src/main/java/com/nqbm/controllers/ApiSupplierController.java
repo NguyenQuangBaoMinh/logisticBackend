@@ -17,6 +17,8 @@ import java.util.HashMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -24,16 +26,18 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/suppliers")
-@CrossOrigin
+@CrossOrigin(origins = "*")
+@Transactional
 public class ApiSupplierController {
     
     @Autowired
     private SupplierService supplierService;
     
     /**
-     * Get all suppliers with optional filters
+     * Get all suppliers with optional filters - ADMIN ONLY
      */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getAllSuppliers(
             @RequestParam Map<String, String> params) {
         
@@ -49,9 +53,10 @@ public class ApiSupplierController {
     }
     
     /**
-     * Get active suppliers only
+     * Get active suppliers only - USER can view for selection
      */
     @GetMapping("/active")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<List<Supplier>> getActiveSuppliers() {
         Map<String, String> params = new HashMap<>();
         params.put("active", "true");
@@ -61,9 +66,61 @@ public class ApiSupplierController {
     }
     
     /**
-     * Search suppliers by name
+     * Get supplier ratings - USER can view for reference
+     */
+    @GetMapping("/ratings")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<Map<String, Object>> getSupplierRatings() {
+        Map<String, String> params = new HashMap<>();
+        params.put("active", "true");
+        
+        List<Supplier> suppliers = supplierService.getSuppliers(params);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("suppliers", suppliers);
+        response.put("message", "Danh sách đánh giá nhà cung cấp");
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Get supplier reviews - USER can view for reference
+     */
+    @GetMapping("/reviews")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<Map<String, Object>> getSupplierReviews() {
+        Map<String, String> params = new HashMap<>();
+        params.put("active", "true");
+        
+        List<Supplier> suppliers = supplierService.getSuppliers(params);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("suppliers", suppliers);
+        response.put("message", "Thông tin đánh giá và nhận xét nhà cung cấp");
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Get public supplier info - USER can view basic info
+     */
+    @GetMapping("/public")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<List<Supplier>> getPublicSuppliers() {
+        Map<String, String> params = new HashMap<>();
+        params.put("active", "true");
+        
+        List<Supplier> suppliers = supplierService.getSuppliers(params);
+        return ResponseEntity.ok(suppliers);
+    }
+    
+    /**
+     * Search suppliers by name - USER can search for reference
      */
     @GetMapping("/search")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<List<Supplier>> searchSuppliers(
             @RequestParam String name,
             @RequestParam(required = false) String active,
@@ -85,9 +142,10 @@ public class ApiSupplierController {
     }
     
     /**
-     * Get supplier by ID
+     * Get supplier by ID - ADMIN ONLY for full details
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Supplier> getSupplierById(@PathVariable Long id) {
         Supplier supplier = supplierService.getSupplierById(id);
         
@@ -99,9 +157,30 @@ public class ApiSupplierController {
     }
     
     /**
-     * Create new supplier
+     * Get public supplier info by ID - USER can view basic info
+     */
+    @GetMapping("/public/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<Map<String, Object>> getPublicSupplierById(@PathVariable Long id) {
+        Supplier supplier = supplierService.getSupplierById(id);
+        
+        if (supplier == null || !supplier.isActive()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("supplier", supplier);
+        response.put("message", "Thông tin nhà cung cấp");
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Create new supplier - ADMIN ONLY
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> createSupplier(@RequestBody Supplier supplier) {
         Map<String, Object> response = new HashMap<>();
         
@@ -133,9 +212,10 @@ public class ApiSupplierController {
     }
     
     /**
-     * Update supplier
+     * Update supplier - ADMIN ONLY
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> updateSupplier(
             @PathVariable Long id, 
             @RequestBody Supplier supplier) {
@@ -181,9 +261,10 @@ public class ApiSupplierController {
     }
     
     /**
-     * Delete supplier
+     * Delete supplier - ADMIN ONLY
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> deleteSupplier(@PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
         
@@ -215,9 +296,10 @@ public class ApiSupplierController {
     }
     
     /**
-     * Toggle supplier active status
+     * Toggle supplier active status - ADMIN ONLY
      */
     @PutMapping("/{id}/toggle-active")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> toggleSupplierStatus(@PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
         
@@ -252,9 +334,10 @@ public class ApiSupplierController {
     }
     
     /**
-     * Update supplier rating
+     * Update supplier rating - ADMIN ONLY (USER không được phép rate trực tiếp)
      */
     @PutMapping("/{id}/rating")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> updateSupplierRating(
             @PathVariable Long id, 
             @RequestBody Map<String, Integer> ratingData) {
@@ -297,9 +380,10 @@ public class ApiSupplierController {
     }
     
     /**
-     * Get suppliers count
+     * Get suppliers count - ADMIN ONLY
      */
     @GetMapping("/count")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getSuppliersCount() {
         Map<String, Object> response = new HashMap<>();
         

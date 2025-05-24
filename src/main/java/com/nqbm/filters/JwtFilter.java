@@ -20,49 +20,72 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 
-/**
- *
- * @author huu-thanhduong
- */
-public class JwtFilter implements Filter{
+@Component
+public class JwtFilter implements Filter {
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) 
+            throws IOException, ServletException {
         
         HttpServletRequest httpRequest = (HttpServletRequest) request;
+        HttpServletResponse httpResponse = (HttpServletResponse) response;
         
-        if (httpRequest.getRequestURI().startsWith(String.format("%s/api/secure", httpRequest.getContextPath())) == true) {
+        String requestURI = httpRequest.getRequestURI();
+        String contextPath = httpRequest.getContextPath();
         
-           
+        System.out.println(" JWT Filter processing: " + requestURI);
+        
+        // FIX: Check for both /api/secure and /api/auth/secure paths
+        if (requestURI.startsWith(contextPath + "/api/auth/secure") || 
+            requestURI.startsWith(contextPath + "/api/secure")) {
+            
+            System.out.println(" JWT Filter: Processing secure endpoint");
+            
             String header = httpRequest.getHeader("Authorization");
+            System.out.println(" Authorization header: " + (header != null ? header.substring(0, Math.min(30, header.length())) + "..." : "null"));
             
             if (header == null || !header.startsWith("Bearer ")) {
-                ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing or invalid Authorization header.");
+                System.out.println(" JWT Filter: Missing or invalid Authorization header");
+                httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing or invalid Authorization header.");
                 return;
             }
-            else {
-                String token = header.substring(7);
-                try {
-                    String username = JwtUtils.validateTokenAndGetUsername(token);
-                    if (username != null) {
-                        httpRequest.setAttribute("username", username);
-                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(username, null, null);
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                        
-                        chain.doFilter(request, response);
-                        return;
-                    }
-                } catch (Exception e) {
-                    // Log lỗi
+            
+            String token = header.substring(7);
+            try {
+                String username = JwtUtils.validateTokenAndGetUsername(token);
+                if (username != null) {
+                    System.out.println("JWT Filter: Token valid for user: " + username);
+                    
+                    // Set username attribute for controller access
+                    httpRequest.setAttribute("username", username);
+                    
+                    // Set Spring Security authentication
+                    UsernamePasswordAuthenticationToken authentication = 
+                        new UsernamePasswordAuthenticationToken(username, null, null);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    
+                    // Continue with the request
+                    chain.doFilter(request, response);
+                    return;
+                } else {
+                    System.out.println("JWT Filter: Token validation returned null username");
                 }
+            } catch (Exception e) {
+                System.out.println(" JWT Filter: Token validation exception: " + e.getMessage());
+                e.printStackTrace();
             }
 
-            ((HttpServletResponse) response).sendError(HttpServletResponse.SC_UNAUTHORIZED, 
+            // If we reach here, token is invalid
+            System.out.println(" JWT Filter: Sending UNAUTHORIZED response");
+            httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, 
                     "Token không hợp lệ hoặc hết hạn");
+            return;
         }
         
+        // For non-secure endpoints, continue normally
+        System.out.println("➡️ JWT Filter: Non-secure endpoint, continuing...");
         chain.doFilter(request, response);
     }
-    
 }

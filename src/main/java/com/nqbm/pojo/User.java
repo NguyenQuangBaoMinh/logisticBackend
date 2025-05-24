@@ -1,5 +1,6 @@
 package com.nqbm.pojo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
@@ -16,6 +17,7 @@ public class User implements Serializable {
     @Column(unique = true, nullable = false)
     private String username;
     
+    @JsonIgnore 
     @Column(nullable = false)
     private String password;
     
@@ -133,6 +135,53 @@ public class User implements Serializable {
     
     public void addRole(Role role) {
         this.roles.add(role);
+    }
+    
+    
+    public String getUserRole() {
+        if (roles != null && !roles.isEmpty()) {
+            
+            Role firstRole = roles.iterator().next();
+            String roleName = firstRole.getName().toUpperCase();
+            
+            
+            if (!roleName.startsWith("ROLE_")) {
+                roleName = "ROLE_" + roleName;
+            }
+            
+            System.out.println("getUserRole() returning: " + roleName + " for user: " + username);
+            return roleName;
+        }
+        System.out.println("getUserRole() returning null for user: " + username + " (no roles)");
+        return null;
+    }
+    
+    // Helper method to check if user has specific role
+    public boolean hasRole(String roleName) {
+        if (roles == null) return false;
+        
+        String normalizedRoleName = roleName.toUpperCase();
+        if (normalizedRoleName.startsWith("ROLE_")) {
+            normalizedRoleName = normalizedRoleName.substring(5);
+        }
+        
+        for (Role role : roles) {
+            if (role.getName().toUpperCase().equals(normalizedRoleName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    // Helper method to get all role names
+    public Set<String> getRoleNames() {
+        Set<String> roleNames = new HashSet<>();
+        if (roles != null) {
+            for (Role role : roles) {
+                roleNames.add("ROLE_" + role.getName().toUpperCase());
+            }
+        }
+        return roleNames;
     }
     
     @PrePersist

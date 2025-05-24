@@ -10,6 +10,7 @@ package com.nqbm.pojo;
  */
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.HashSet;
@@ -28,6 +29,7 @@ public class Role implements Serializable {
     @Column(name = "description")
     private String description;
     
+    @JsonIgnore
     @ManyToMany(mappedBy = "roles")
     private Set<User> users = new HashSet<>();
     

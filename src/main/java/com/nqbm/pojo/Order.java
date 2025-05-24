@@ -9,6 +9,7 @@ package com.nqbm.pojo;
  * @author baominh14022004gmail.com
  */
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -85,6 +86,7 @@ public class Order implements Serializable {
     private Supplier supplier;
     
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private Set<OrderDetail> orderDetails = new HashSet<>();
     
     // Constructors

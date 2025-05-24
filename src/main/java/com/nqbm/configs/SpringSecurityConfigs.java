@@ -4,9 +4,9 @@
  */
 package com.nqbm.configs;
 
-
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.nqbm.filters.JwtFilter;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -14,7 +14,6 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -24,6 +23,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -35,7 +35,7 @@ import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import javax.sql.DataSource;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.web.debug.DebugFilter;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 @EnableWebSecurity
@@ -43,17 +43,21 @@ import org.springframework.security.web.debug.DebugFilter;
 @EnableMethodSecurity(prePostEnabled = true)
 @ComponentScan(basePackages = {
     "com.nqbm.controllers",
-    "com.nqbm.repositories", 
-    "com.nqbm.services"
+    "com.nqbm.repositories",
+    "com.nqbm.services",
+    "com.nqbm.filters" 
 })
 public class SpringSecurityConfigs {
 
     @Autowired
     private UserDetailsService userDetailsService;
-    
+
     @Autowired
     private DataSource dataSource;
-
+    
+    // FIX: Inject JWT Filter
+    @Autowired
+    private JwtFilter jwtFilter;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -61,11 +65,16 @@ public class SpringSecurityConfigs {
     }
 
     @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+
+    @Bean
     public AuthenticationManager authManager(HttpSecurity http) throws Exception {
         AuthenticationManagerBuilder auth = http.getSharedObject(AuthenticationManagerBuilder.class);
         System.out.println("Configuring AuthenticationManager with userDetailsService");
         auth.userDetailsService(userDetailsService)
-            .passwordEncoder(passwordEncoder());
+                .passwordEncoder(passwordEncoder());
         return auth.build();
     }
 
@@ -80,67 +89,99 @@ public class SpringSecurityConfigs {
     @Order(1)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                // Public endpoints
-                .requestMatchers("/", "/home", "/login", "/logout", 
-                               "/register","/api/auth/**", "/error").permitAll()
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                
+                // FIX: Add JWT Filter before UsernamePasswordAuthenticationFilter
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                
+                .authorizeHttpRequests(auth -> auth
+                // ===== PUBLIC ENDPOINTS =====
+                .requestMatchers("/", "/home", "/login", "/logout", "/register", "/error").permitAll()
                 .requestMatchers("/static/**", "/resources/**").permitAll()
-                
-                // Debug endpoints
                 .requestMatchers("/debug-auth", "/create-new-admin", "/generate-password").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/users", "/api/auth/logout").permitAll()  // Public auth endpoints
                 
-                // Admin management
+                // ===== SECURE ENDPOINTS REQUIRING JWT =====
+                .requestMatchers("/api/auth/secure/**").authenticated()  // JWT protected endpoints
+                .requestMatchers("/api/secure/**").authenticated()       // Additional secure endpoints
+                
+                // ===== ADMIN ONLY ENDPOINTS =====
                 .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/suppliers/manage/**").hasRole("ADMIN")
+                .requestMatchers("/api/inventory/**").hasRole("ADMIN")
+                .requestMatchers("/api/reports/**").hasRole("ADMIN")
+                .requestMatchers("/inventory/**").hasRole("ADMIN")
                 
-                // Supplier management
-                .requestMatchers("/suppliers").hasAnyRole("ADMIN", "PURCHASER")
-                .requestMatchers("/suppliers/**").hasRole("PURCHASER")
+                // ===== PRODUCTS - Mixed Access =====
+                .requestMatchers(HttpMethod.GET, "/api/products/**").hasAnyRole("ADMIN", "USER")
+                .requestMatchers("/api/products/**").hasRole("ADMIN") // CRUD operations for Admin only
+
+                // ===== SUPPLIERS - Mixed Access =====
+                .requestMatchers(HttpMethod.GET, "/api/suppliers/ratings/**").hasAnyRole("ADMIN", "USER")
+                .requestMatchers(HttpMethod.GET, "/api/suppliers/reviews/**").hasAnyRole("ADMIN", "USER")
+                .requestMatchers(HttpMethod.GET, "/api/suppliers/public/**").hasAnyRole("ADMIN", "USER")
+                .requestMatchers("/suppliers").hasRole("ADMIN") // Web interface for admin
+                .requestMatchers("/suppliers/**").hasRole("ADMIN")
+                .requestMatchers("/api/suppliers/**").hasRole("ADMIN") // API CRUD for Admin
+
+                // ===== ORDERS - Mixed Access =====
+                .requestMatchers(HttpMethod.GET, "/api/orders/my/**").hasRole("USER") // User's own orders
+                .requestMatchers(HttpMethod.POST, "/api/orders").hasAnyRole("ADMIN", "USER") // Create orders
+                .requestMatchers(HttpMethod.PUT, "/api/orders/my/**").hasRole("USER") // Update own orders
+                .requestMatchers("/orders").hasRole("ADMIN") // Web interface for admin
+                .requestMatchers("/orders/**").hasRole("ADMIN")
+                .requestMatchers("/api/orders/**").hasRole("ADMIN") // Admin sees all orders
+
+                // ===== PAYMENTS - Mixed Access =====
+                .requestMatchers(HttpMethod.GET, "/api/payments/my/**").hasRole("USER") // User's own payments
+                .requestMatchers(HttpMethod.POST, "/api/payments").hasAnyRole("ADMIN", "USER") // Make payments
+                .requestMatchers("/payments/**").hasRole("ADMIN") // Web interface for admin
+                .requestMatchers("/api/payments/**").hasRole("ADMIN") // Admin sees all payments
+
+                // ===== SHIPPING - Mixed Access =====
+                .requestMatchers(HttpMethod.GET, "/api/shipping/track/**").hasAnyRole("ADMIN", "USER") // Track shipments
+                .requestMatchers(HttpMethod.GET, "/api/shipping/my/**").hasRole("USER") // User's own shipments
+                .requestMatchers("/shipping/**").hasRole("ADMIN") // Web interface for admin
+                .requestMatchers("/api/shipping/**").hasRole("ADMIN") // Admin manages shipping
+
+                // ===== SUPPORT - Mixed Access =====
+                .requestMatchers(HttpMethod.POST, "/api/support/tickets").hasAnyRole("ADMIN", "USER") // Create support tickets
+                .requestMatchers(HttpMethod.GET, "/api/support/my-tickets/**").hasRole("USER") // User's own tickets
+                .requestMatchers("/api/support/**").hasRole("ADMIN") // Admin manages support
+
+                // ===== PRICES - Admin Only =====
+                .requestMatchers("/prices/**").hasRole("ADMIN")
+                .requestMatchers("/api/prices/**").hasRole("ADMIN")
                 
-                // Order management
-                .requestMatchers("/orders").hasAnyRole("ADMIN", "SALES", "WAREHOUSE")
-                .requestMatchers("/orders/create").hasRole("SALES")
-                .requestMatchers("/orders/approve").hasRole("WAREHOUSE")
-                
-                // Inventory management
-                .requestMatchers("/inventory/**").hasAnyRole("ADMIN", "WAREHOUSE")
-                
-                // Shipping management
-                .requestMatchers("/shipping/**").hasAnyRole("ADMIN", "SHIPPER")
-                
-                // Payment management
-                .requestMatchers("/payments/**").hasAnyRole("ADMIN", "ACCOUNTANT")
-                
-                // API endpoints
-                .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/**").hasAnyRole("ADMIN", "MANAGER")
-                
+                // ===== DEFAULT =====
                 .anyRequest().authenticated()
-            )
-            .formLogin(form -> form
+                )
+                
+                .formLogin(form -> form
                 .loginPage("/login")
                 .loginProcessingUrl("/login")
                 .defaultSuccessUrl("/dashboard")
                 .failureUrl("/login?error=true")
                 .permitAll()
-            )
-            .logout(logout -> logout
+                )
+                .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout=true")
                 .deleteCookies("JSESSIONID", "remember-me")
                 .invalidateHttpSession(true)
                 .permitAll()
-            )
-            .rememberMe(remember -> remember
+                )
+                .rememberMe(remember -> remember
                 .tokenRepository(persistentTokenRepository())
                 .tokenValiditySeconds(7 * 24 * 60 * 60) // 1 tuần
                 .userDetailsService(userDetailsService)
-            )
-            .exceptionHandling(ex -> ex
+                )
+                .exceptionHandling(ex -> ex
                 .accessDeniedPage("/access-denied")
-            );
-        
+                );
+
         return http.build();
     }
 
@@ -154,9 +195,9 @@ public class SpringSecurityConfigs {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5000"));
+        config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5000"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+        config.setAllowedHeaders(List.of("*")); // Allow all headers
         config.setExposedHeaders(List.of("Authorization", "X-Requested-With"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
@@ -169,10 +210,10 @@ public class SpringSecurityConfigs {
     @Bean
     public Cloudinary cloudinary() {
         return new Cloudinary(ObjectUtils.asMap(
-            "cloud_name", "dfkq1dhjr",
-            "api_key", "621292875447649",
-            "api_secret", "jJlrnzJlp7ujU_Wq9aQbSpLlYlQ",
-            "secure", true
+                "cloud_name", "dfkq1dhjr",
+                "api_key", "621292875447649",
+                "api_secret", "jJlrnzJlp7ujU_Wq9aQbSpLlYlQ",
+                "secure", true
         ));
     }
 
@@ -180,7 +221,7 @@ public class SpringSecurityConfigs {
     public StandardServletMultipartResolver multipartResolver() {
         return new StandardServletMultipartResolver();
     }
-    
+
     @Bean
     public HandlerMappingIntrospector mvcHandlerMappingIntrospector() {
         return new HandlerMappingIntrospector();
